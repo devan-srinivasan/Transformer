@@ -1,29 +1,10 @@
 """
-I am attempting to build a Transformer Neural Network here.
-For planning, I will overview the nn modules needed + other tasks 
-that I need to sort out. (py)torch is so cool.
-
-update: so turns out this exact task is already done online so I 
-have basically been following this: 
-    https://medium.com/the-dl/transformers-from-scratch-in-pytorch-8777e346ca51
-
-i just do each part myself then compare and fix whatever I missed and make sure
-i understand every line every part and every matrix multiplication so nothing is copied
-without understanding
+The model and hekpful classes. Built bottom-up
 """
 import torch
 import torch.nn as nn
 import math
 from torch import tensor
-
-class Embedding(nn.Module):
-    def __init__(self, d_model: int, d_vocab: int) -> None:
-        super().__init__()
-        self.embedding = nn.Embedding(d_vocab, d_model)
-        self.d_model = d_model
-        
-    def forward(self, x: tensor) -> tensor:
-        return self.embedding(x) * math.sqrt(self.d_model)
 
 class Attention(nn.Module):
     def __init__(self, dim_in: int, dim_k: int, dim_v: int, ) -> None:
