@@ -27,8 +27,6 @@ def tut():
 # y = torch.arange(4)
 # print(torch.where(y % 2 == 0, 2*x, 3*x))
 
-def f(*args):
-    print(args[0])
-    print(*args)
-
-f(1, 2, 3, 4, 5)
+import torch.nn as nn
+x = torch.rand(1, 3).to(torch.int64)
+print(nn.Embedding(5, 3)(x).shape) 

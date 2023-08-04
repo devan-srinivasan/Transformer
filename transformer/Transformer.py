@@ -13,8 +13,17 @@ without understanding
 """
 import torch
 import torch.nn as nn
-import torch.nn.functional as f
+import math
 from torch import tensor
+
+class Embedding(nn.Module):
+    def __init__(self, d_model: int, d_vocab: int) -> None:
+        super().__init__()
+        self.embedding = nn.Embedding(d_vocab, d_model)
+        self.d_model = d_model
+        
+    def forward(self, x: tensor) -> tensor:
+        return self.embedding(x) * math.sqrt(self.d_model)
 
 class Attention(nn.Module):
     def __init__(self, dim_in: int, dim_k: int, dim_v: int, ) -> None:
@@ -118,29 +127,29 @@ class Decoder(nn.Module):
         self.layers = nn.ModuleList([
             DecoderBlock(dim_model, num_heads, dim_ff, dropout) for _ in range(num_layers)
         ])
-        self.linear = nn.Linear(dim_model, dim_model, dtype=torch.float32)
         self.device = device
 
     def forward(self, x: tensor, memory: tensor) -> tensor:
         x = x + positional_encoding(x.size(1), x.size(2), device=self.device)   # encode the position
         for layer in self.layers:   # feed forward through each layer
             x = layer(x, memory)
-        return torch.softmax(self.linear(x), dim=-1)
+        return x
     
 class Transformer(nn.Module):
-    def __init__(self, num_enc_blocks: int = 6, num_dec_blocks: int = 6, 
+    def __init__(self,
+                 num_enc_blocks: int = 6, num_dec_blocks: int = 6, 
                  dim_model: int = 512, dim_ff: int = 2048, 
                  num_heads: int = 8, dropout: float = 0.1,
-                 device: torch.device = torch.device("cpu")):
+                 out_distribution_size: int = 1,
+                 device: torch.device = torch.device("cpu"),
+                 ):
         super().__init__()
         self.encoder = Encoder(dim_model, dim_ff, num_heads, num_enc_blocks, dropout, device=device)
         self.decoder = Decoder(dim_model, dim_ff, num_heads, num_dec_blocks, dropout, device=device)
+        self.linear = nn.Linear(dim_model, out_distribution_size, dtype=torch.float32)
 
     def forward(self, x_in: tensor, x_out: tensor) -> tensor:
-        return self.decoder(x_out, self.encoder(x_in))
-
-# sanity check
-input_embeddings = torch.rand(1, 32, 512)
-output_embeddings = torch.rand(1, 16, 512)
-out = Transformer()(input_embeddings, output_embeddings)
-print(out.shape)
+        x_in, x_out = x_in.to(torch.int64), x_out.to(torch.int64)
+        x = self.decoder(x_out, self.encoder(x_in))
+        x = x[:, -1:, :] # take the last token
+        return torch.softmax(self.linear(x), dim=-1)
